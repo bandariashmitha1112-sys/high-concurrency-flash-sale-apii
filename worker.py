@@ -1,10 +1,19 @@
+import os
 from redis import Redis
 from rq import Queue
+from dotenv import load_dotenv
+
 from tasks import process_purchase_notification
 
-redis_connection = Redis(
-    host="127.0.0.1",
-    port=6379,
+load_dotenv()
+
+REDIS_URL = os.getenv("REDIS_URL")
+
+if not REDIS_URL:
+    raise RuntimeError("REDIS_URL is not set")
+
+redis_connection = Redis.from_url(
+    REDIS_URL,
     decode_responses=True
 )
 

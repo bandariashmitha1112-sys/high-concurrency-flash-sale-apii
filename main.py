@@ -2,17 +2,20 @@ from dotenv import load_dotenv
 import os
 from redis import Redis
 from rq import Queue
-redis_connection = Redis(
-    host="127.0.0.1",
-    port=6379,
-    decode_responses=True
+from redis_client import (
+    redis_client,
+    decrease_product_stock,
+    increase_product_stock,
+    set_product_stock
 )
 
 queue = Queue(
     "flash_sale",
-    connection=redis_connection
+    connection=redis_client
 )
 from tasks import process_purchase_notification
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Depends, HTTPException, Form, Header, Request
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, Field
@@ -32,7 +35,13 @@ from time import time
 
 
 app = FastAPI()
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # =========================
 # SECURITY SETTINGS
@@ -107,7 +116,21 @@ class OrderTable(Base):
 # =========================
 
 Base.metadata.create_all(bind=engine)
+def initialize_redis_stock():
+    db = SessionLocal()
 
+    try:
+        products = db.query(ProductTable).all()
+
+        for product in products:
+            key = f"product_stock:{product.id}"
+
+            if not redis_client.exists(key):
+                set_product_stock(product.id, product.stock)
+
+    finally:
+        db.close()
+initialize_redis_stock()
 
 # =========================
 # PYDANTIC SCHEMAS
@@ -239,7 +262,7 @@ def get_products(
     current_user: UserTable = Depends(get_current_user)
 ):
     check_rate_limit(request)
-    products = db.query(ProductTable).all()
+    products = db.query(ProductTable).order_by(ProductTable.id).all()
 
     return [
         {
