@@ -9,19 +9,9 @@ PRODUCT_ID = 1
 URL = f"http://127.0.0.1:8000/products/{PRODUCT_ID}/purchase"
 
 NUMBER_OF_USERS = 50
-LOGIN_URL = "http://127.0.0.1:8000/login"
 
-login_response = requests.post(
-    LOGIN_URL,
-    data={
-        "username": "ravi",
-        "password": "hello123"
-    }
-)
+ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIjoxNzg5OTY3OTE0fQ.Ld7EA2PGNybnHnE76vbQxc8LJKkuebt9tmyfVYLAHqY"
 
-login_response.raise_for_status()
-
-ACCESS_TOKEN = login_response.json()["access_token"]
 
 def purchase():
     start = time.perf_counter()
@@ -85,17 +75,7 @@ total_time = end_time - start_time
 requests_per_second = NUMBER_OF_USERS / total_time
 
 average_response_time = sum(response_times) / len(response_times)
-from collections import Counter
 
-status_counts = Counter(
-    result["status"]
-    for result in results
-)
-
-print("HTTP status counts :", dict(status_counts))
-for result in results:
-    if result["status"] == 400:
-        print("400 ERROR:", result["data"])
 
 print()
 print("======================================")
